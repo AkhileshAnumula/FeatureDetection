@@ -13,6 +13,7 @@ import org.opencv.imgproc.Imgproc;
 
 import util.ImageViewer;
 
+
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -32,11 +33,13 @@ public class CornerDetector
 	
 	private Mat src;
 	private Mat frame_gray;
+	private Mat equalized;
 	VideoCapture video;
 	Random number = new Random(12345);
 	
 	private CornerDetector initFrames()
 	{
+		//Init Video Camara Frame
 		videoCamara = new JFrame("Video Camara");
 		videoCamara.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
@@ -47,7 +50,7 @@ public class CornerDetector
 		 videoCamara.setLocationByPlatform(true);
 		 videoCamara.setVisible(true);
 		 
-		 
+		 //Init Video Camara Result Frame
 		 videoCamaraResult = new JFrame("Video Camara Result");
 		 videoCamaraResult.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 			
@@ -61,9 +64,9 @@ public class CornerDetector
 		 return this;
 	}
 	
-	
 	private void run()
 	{
+		//Init VideoCapture
 		if (video != null) {
             VideoCapture camera = video;
             video = null; // Make it null before releasing...
@@ -71,32 +74,36 @@ public class CornerDetector
         }
 		
 		video = new VideoCapture(0);
+		
+		//5 segundos: Tiempo de espera seleccionado para encender la camara
 		try {
 			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 		
+		//Panel que informa si hubo un error en la inicializacion de la camara
 		if(!video.isOpened())
 			JOptionPane.showMessageDialog(null, "Cam can not found", "Error", JOptionPane.ERROR_MESSAGE);
 		
 		src = new Mat();
 		frame_gray = new Mat();
+		equalized = new Mat();
 		
 		boolean process = true;
-		
-		int counter = 0;
-		
+		int counter = 0; //Frame counter
 		while(process && video != null)
 		{
 			boolean grabbed = video.grab();
 			if(grabbed)
 			{
+				video.read(src);
 				video.retrieve(src, Highgui.CV_CAP_ANDROID_COLOR_FRAME_RGB);
-				
 				//Gray color
 				Imgproc.cvtColor(src, frame_gray, Imgproc.COLOR_BGRA2GRAY);
-				
+				//Contrast and brightness balance				
+				Imgproc.equalizeHist(frame_gray,equalized);
+			
 				//Init fast
 				MatOfKeyPoint matkp = new MatOfKeyPoint();
 				FeatureDetector fast = FeatureDetector.create(FeatureDetector.FAST);
@@ -133,6 +140,8 @@ public class CornerDetector
 			    } catch (Exception e) {
 			        e.printStackTrace();
 			    }
+			    
+			    //500 frames de funcionamiento, despues corta el proceso
 				if(counter == 500)
 					process = false;
 			    counter++;
@@ -143,20 +152,6 @@ public class CornerDetector
 			video.release();
 			video = null;
         }
-		
-		/*src = Highgui.imread(getClass().getResource("/frame_0.png").getPath());
-		src_aux = src.clone();
-		
-		MatOfKeyPoint matkp = new MatOfKeyPoint();
-		FeatureDetector fast = FeatureDetector.create(FeatureDetector.FAST);
-		fast.detect(frame_gray, matkp);
-		
-		for(KeyPoint kp: matkp.toList())
-		{
-			Core.circle(frame_gray, kp.pt, 4, new Scalar( number.nextInt(255), number.nextInt(255), number.nextInt(255) ));
-		}
-		
-		Highgui.imwrite("frame_0-cornerDetection.png", src_aux);*/
 	}
 	
 	public static void main (String args[])
